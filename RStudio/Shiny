@@ -1,0 +1,89 @@
+library(readxl)
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(readr)
+
+# 載入轉換表
+data5to3 <-  as.data.frame(Table5v5)
+
+# UI
+ui <- fluidPage(
+  titlePanel("EQ-5D-5L ➡ 3L UK Mapping Calculator"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("age", "Age", min = 18, max = 100, value = 50),
+      selectInput("sex", "Sex", choices = c("Male" = 1, "Female" = 0)),
+      
+      selectInput("Y5_1", "Mobility", choices = 1:5),
+      selectInput("Y5_2", "Self-care", choices = 1:5),
+      selectInput("Y5_3", "Usual Activities", choices = 1:5),
+      selectInput("Y5_4", "Pain/Discomfort", choices = 1:5),
+      selectInput("Y5_5", "Anxiety/Depression", choices = 1:5),
+      
+      actionButton("go", "Mapped Results")
+    ),
+    
+    mainPanel(
+      verbatimTextOutput("summary"),
+      plotOutput("utilityPlot", width = "100%", height = "300px"),
+      
+    
+      tags$p(
+        "References：EEPRU paper – Hernández Alava, M., Pudney, S. & Wailoo, A. ",
+        "Estimating the Relationship Between EQ-5D-5L and EQ-5D-3L: Results from a UK Population Study. ",
+        tags$a(href = "https://doi.org/10.1007/s40273-022-01218-7", 
+               "PharmacoEconomics (2022)", target = "_blank")
+    )
+  )
+))
+
+# Server
+server <- function(input, output) {
+  observeEvent(input$go, {
+    # 根據年齡分類
+    age_group <- case_when(
+      input$age >= 18 & input$age < 35 ~ "18-34",
+      input$age >= 35 & input$age < 45 ~ "35-44",
+      input$age >= 45 & input$age < 55 ~ "45-54",
+      input$age >= 55 & input$age < 65 ~ "55-64",
+      input$age >= 65                ~ "65+"
+    )
+    
+    # 篩選符合的列
+    filtered <- data5to3 %>%
+      filter(
+        `_Y5_1` == input$Y5_1,
+        `_Y5_2` == input$Y5_2,
+        `_Y5_3` == input$Y5_3,
+        `_Y5_4` == input$Y5_4,
+        `_Y5_5` == input$Y5_5,
+        `_age5grp` == age_group,
+        `_male` == as.numeric(input$sex)
+      )
+    
+    if (nrow(filtered) == 0) {
+      output$summary <- renderText("No Comparative Results")
+      output$utilityPlot <- renderPlot(NULL)
+    } else {
+      output$summary <- renderText({
+        paste0(
+          "Original EQ-5D-5L utility score: ", round(filtered$`_U5UK`, 3), "\n",
+          "Mapped EQ-5D-3L index score: ", round(filtered$`_EUUKcopula`, 3)
+        )
+      })
+      
+      output$utilityPlot <- renderPlot({
+        ggplot(filtered) +
+          geom_col(aes(x = "Original (5L)", y = `_U5UK`), fill = "steelblue", width = 0.2) +
+          geom_col(aes(x = "Mapped (3L)", y = `_EUUKcopula`), fill = "orange", width = 0.2) +
+          labs(x = "", y = "Utility", title = "Utility value comparison histogram") +
+          ylim(0, 1) +
+          theme_minimal(base_size = 14)
+      })
+    }
+  })
+}
+
+shinyApp(ui, server)
