@@ -4,7 +4,7 @@ library(dplyr)
 library(ggplot2)
 library(readr)
 
-# 載入轉換表
+# read the datasets
 data5to3 <-  as.data.frame(Table5v5)
 
 # UI
@@ -42,7 +42,7 @@ ui <- fluidPage(
 # Server
 server <- function(input, output) {
   observeEvent(input$go, {
-    # 根據年齡分類
+    # Sort the age by group 
     age_group <- case_when(
       input$age >= 18 & input$age < 35 ~ "18-34",
       input$age >= 35 & input$age < 45 ~ "35-44",
@@ -51,7 +51,7 @@ server <- function(input, output) {
       input$age >= 65                ~ "65+"
     )
     
-    # 篩選符合的列
+    # Select the value
     filtered <- data5to3 %>%
       filter(
         `_Y5_1` == input$Y5_1,
