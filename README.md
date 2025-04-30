@@ -1,4 +1,4 @@
-# EQ5D-Mapping-Calculator
+# UK EQ5D-Mapping-Calculator
 
 This is a user-friendly calculator for mapping between EQ-5D-5L and 3L.
 
